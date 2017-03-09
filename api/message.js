@@ -31,7 +31,12 @@ let getConversationResponse = (message, context) => {
 
   return new Promise((resolved, rejected) => {
     // Send the input to the conversation service
-    // TODO : To be implemented
+    conversation.message(payload, function(err, data) {
+      if (err) {
+        reject(err);
+      }
+      resolved(postProcess(data));
+    });
   })
 }
 
