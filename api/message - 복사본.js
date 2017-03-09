@@ -114,27 +114,6 @@ let doAction = (data, action) => {
     case "confirm-reservation":
       return confirmReservation(data, action);
       break;
-    // 사용자의 예약 리스트를 가져옵니다.
-    case "check-reservation":
-      return checkReservation(data, action);
-      break;
-    // 사용자의 예약 리스트 중 가장 빠른 시간의 예약만 가져옵니다. 
-    case "check-next-reservation":
-      return checkNextReservation(data, action);
-      break;
-    // 예약 취소의 목적으로 예약 리스트를 가져옵니다.
-    case "check-reservation-for-cancellation":
-      return checkReservation(data, action).then(data => {
-        if(Array.isArray(data.output.text)){
-          data.output.text.unshift("Please tell me the number of the reservation you want to cancel.");
-        }
-        return data;
-      });
-      break;
-    // 예약을 취소합니다.
-    case "confirm-cancellation":
-      return confirmCancellation(data, action);
-      break;
     default: console.log("Command not supported.")
   }
 }
@@ -224,7 +203,7 @@ let confirmReservation = (data, action) =>{
     url : process.env.RBS_URL + '/book',
     headers : {
       'Accept': 'application/json',
-      'Content-Type': 'application/json' //'application/x-www-form-urlencoded'
+      'Content-Type': 'application/x-www-form-urlencoded'
     },
     json : {
       "roomid": 'room1/camomile',
@@ -241,123 +220,9 @@ let confirmReservation = (data, action) =>{
   return new Promise((resolved, rejected) => {
     request(reqOption, (err, res, body) => {
       data.context.action = {};
-      console.log(reqOption, body);
-      if(err || res.statusCode > 300){
+      if(err){
         data.output.text = "Your reservation is not successful. Please try again."
         resolved(data);
-      }
-      resolved(data);
-    })
-  });
-}
-
-/** 
- * 사용자의 회의실 예약 리스트를 가져오는 함수
- * @param  {Object} data : response object
- * @param  {Object} action 
- */ 
-let checkReservation = (data, action) => {
-  // context에서 필요한 값을 추출합니다.
-  let date = action.dates;
-  let startTime, endTime;
-  if(action.times){
-    startTime = action.times[0]?action.times[0].value:undefined;
-    endTime = action.times[1]?action.times[1].value:undefined;
-  }
-
-  // 날짜 값과 시간 값을 조합하여 시작 시간과 종료 시간을 Timestamp 형태로 변환합니다. 편의를 위해 종료 시간이 따로 명시되지 않는 경우 시작 시간에서 1개월 후로 설정하도록 합니다.
-  let startTimestamp = new moment();
-  if(startTime){
-    startTimestamp = new moment(date+"T"+startTime+"+0900");
-  }
-  let endTimestamp = new moment(startTimestamp).month(startTimestamp.month() + 1);
-  if(endTime){
-    endTimestamp = new moment(date+" "+endTime);
-  }
-
-  // /book/search/byuser API는 site id, user id, start time, end time을 Query parameter로 받아 해당 시간에 사용자의 예약 리스트를 return해주는 api입니다.
-  let reqOption = {
-    method : 'GET',
-    url : process.env.RBS_URL + '/book/search/byuser',
-    headers : {
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    qs : {
-    "siteid" : "camomile",
-    "userid" : data.context.user.id,
-    "start" : startTimestamp.valueOf(),
-    "end" : endTimestamp.valueOf()
-    }
-  };
-  
-  return new Promise((resolved, rejected) => {
-    request(reqOption, (err, res, body) => {
-      data.context.action = {};
-      if(err){
-        rejected(err);
-      }
-      console.log(reqOption, body);
-      body = JSON.parse(body);
-      // body 의 length가 0보다 크면 기존에 예약정보가 있다는 의미입니다.
-      if(body && body.length > 0){
-        let resvs = [];
-        let index = 0;
-        for(let resv of body){
-          //예약 목록을 사용자가 볼 수 있는 형태로 변환하여 resvs 변수에 저장합니다.
-          resvs.push((++index) + ": " + new moment(resv.start).format(config.dateTimeFormat) + " ~ " + new moment(resv.end).format(config.dateTimeFormat) + ", " + resv.roomid + ", " + resv.purpose);
-        }
-        //예약 목록을 Context에 저장합니다.
-        data.context.reservations = body;
-        //사용자에게 보여줄 예약 목록은 Output에 저장합니다.
-        data.output.text = resvs;
-      }
-      else{
-        data.output.text = ["Your reservation is not found."];
-      }
-      resolved(data);
-    })
-  });
-}
-
-let checkNextReservation = (data, action) => {
-  return checkReservation(data, action).then(data => {
-    if(data.output.text && Array.isArray(data.output.text)) data.output.text = data.output.text[0];
-    return data
-  });
-}
-
-/** 
- * 회의실 취소
- * @param  {Object} data : response object
- * @param  {Object} action 
- */ 
-let confirmCancellation = (data, action) => {
-  // user 정보는 action 정보에 담겨있지 않으므로 data에서 추출합니다.
-  let user = data.context.user;
-  let eventId = data.context.eventid;
-  let reservations = data.context.reservations;
-  let index = data.context.removeIndex;
-
-  let reqOption = {
-    method : 'DELETE',
-    url : process.env.RBS_URL + '/book',
-    headers : {
-      'Accept': 'text/plain',//'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    qs : {
-      "eventid" : reservations[index].id,
-      "userid" : user.id,
-      "roomid" : reservations[index].roomid
-    }
-  };
-
-  return new Promise((resolved, rejected) => {
-    request(reqOption, (err, res, body) => {
-      data.context.action = {};
-      if (res.statusCode >= 300) {
-        data.output.text = "Your request is not successful. Please try again."
       }
       resolved(data);
     })
