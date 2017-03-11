@@ -35,26 +35,28 @@ let getConversationResponse = (message, context) => {
     // Send the input to the conversation service
     conversation.message(payload, function(err, data) {
       if (err) {
-        reject(err);
-      }
-      let processed = postProcess(data);
-      if(processed){
-        // return 값이 Promise 일 경우
-        if(typeof processed.then === 'function'){
-          processed.then(data => {
-            resolved(data);
-          }).catch(err => {
-            reject(err);
-          })
-        }
-        // return 값이 변경된 data일 경우
-        else{
-          resolved(processed);
-        }
+        rejected(err);
       }
       else{
-        // return 값이 없을 경우
-        resolved(data);
+        let processed = postProcess(data);
+        if(processed){
+          // return 값이 Promise 일 경우
+          if(typeof processed.then === 'function'){
+            processed.then(data => {
+              resolved(data);
+            }).catch(err => {
+              rejected(err);
+            })
+          }
+          // return 값이 변경된 data일 경우
+          else{
+            resolved(processed);
+          }
+        }
+        else{
+          // return 값이 없을 경우
+          resolved(data);
+        }
       }
     });
   })
@@ -197,7 +199,7 @@ let confirmReservation = (data, action) =>{
     url : process.env.RBS_URL + '/book',
     headers : {
       'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/json'
     },
     json : {
       "roomid": 'room1/camomile',
