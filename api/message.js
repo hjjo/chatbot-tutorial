@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+ 'use strict';
+ 
 const Conversation = require('watson-developer-cloud/conversation/v1'); // watson sdk
 const config = require('../util/config');
 
