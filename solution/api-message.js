@@ -33,7 +33,7 @@ let getConversationResponse = (message, context) => {
     // Send the input to the conversation service
     conversation.message(payload, function(err, data) {
       if (err) {
-        reject(err);
+        rejected(err);
       }
       resolved(postProcess(data));
     });
