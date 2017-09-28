@@ -35,6 +35,7 @@ let postMessage = (req, res) => {
 bot.setWebHook(`${url}/bot${token}`);
 
 bot.on('message', msg => {
+  console.log("message!!")
   let user_key = msg.chat.id;
   let content = {
   	text : msg.text
@@ -54,7 +55,7 @@ bot.on('message', msg => {
     });
   }).catch(function(err) {
     // first communication
-    conversation.getConversationResponse(content, doc.context).then(data => {
+    conversation.getConversationResponse(content, {}).then(data => {
       db.insert({
         '_id' : user_key+"", // cloudant의 doc id는 반드시 string 타입이어야 합니다.
         'user_key' : user_key+"",

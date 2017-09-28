@@ -5,3 +5,6 @@ temp/
 coverage
 .env
 npm-debug.log
+solution/telegram/backup.js
+solution/.DS_Store
+.DS_Store
